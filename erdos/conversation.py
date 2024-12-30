@@ -10,6 +10,7 @@ from typing import Union
 class Conversation:
 
     LOCK_ACQUIRE_DELAY = 0.1
+    MAX_NUM_RETRIES = 12
 
     def __init__(self, conversation_id: int,
                  event_loop: asyncio.AbstractEventLoop,
@@ -35,7 +36,7 @@ class Conversation:
             self._consume_message(), self.event_loop
         )
 
-    async def _consume_message(self, num_retries: int = 12):
+    async def _consume_message(self, num_retries: int = MAX_NUM_RETRIES):
         """Consume message from the message queue, and send it to the agent
         """
 
@@ -47,7 +48,8 @@ class Conversation:
             # Wait for the lock to be released and retry
             # Have an exponential backoff to avoid blocking the event loop
             # Could potentially include queue size in the backoff calculation
-            backoff = 2 ** (10 - num_retries) * Conversation.LOCK_ACQUIRE_DELAY
+            backoff = 2 ** (Conversation.MAX_NUM_RETRIES -
+                            num_retries) * Conversation.LOCK_ACQUIRE_DELAY
             await asyncio.sleep(backoff)
             return await self._consume_message(num_retries - 1)
 
